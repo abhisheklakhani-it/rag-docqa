@@ -1,0 +1,14 @@
+services:
+  api:
+    build: .
+    image: rag-docqa:latest
+    ports:
+      - "8000:8000"
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - index-data:/app/index # keeps the index when the container is recreated
+
+volumes:
+  index-data:
