@@ -1,0 +1,16 @@
+{
+  "correct_matches": 339,
+  "off_topic_questions": 30,
+  "correct_score_percentiles": {
+    "1": 0.602,
+    "5": 0.651,
+    "50": 0.789
+  },
+  "off_topic_best_score": {
+    "median": 0.548,
+    "max": 0.645
+  },
+  "chosen_floor": 0.6,
+  "correct_kept": 0.988,
+  "off_topic_rejected": 0.867
+}

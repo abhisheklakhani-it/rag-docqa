@@ -7,6 +7,7 @@ import pytest
 # Tests never call the real LLM API.
 os.environ["RAGQA_LLM"] = "none"
 os.environ["RAGQA_RETRIEVER"] = "hybrid"
+os.environ["RAGQA_MIN_DENSE_SCORE"] = "0"  # the floor is calibrated for the real model, not the test embedder
 
 
 class HashingEmbedder:

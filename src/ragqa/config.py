@@ -27,7 +27,8 @@ class Settings:
     retriever: str = field(default_factory=lambda: os.getenv("RAGQA_RETRIEVER", "hybrid").lower())
     embedding_model: str = field(default_factory=lambda: os.getenv("RAGQA_EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5"))
     embedding_cache_dir: str | None = field(default_factory=lambda: os.getenv("RAGQA_EMBEDDING_CACHE_DIR") or None)
-    # Dense hits below this cosine similarity are ignored, so unrelated questions find nothing.
-    min_dense_score: float = field(default_factory=lambda: float(os.getenv("RAGQA_MIN_DENSE_SCORE", "0.0")))
+    # Dense hits below this cosine similarity are ignored, so unrelated questions find nothing. 0.60 was
+    # calibrated for bge-small-en-v1.5 (scripts/calibrate_min_score.py); recalibrate if you change the model.
+    min_dense_score: float = field(default_factory=lambda: float(os.getenv("RAGQA_MIN_DENSE_SCORE", "0.60")))
     # OCR for scanned PDF pages that have no text layer: "auto" (default) or "off".
     ocr: bool = field(default_factory=lambda: os.getenv("RAGQA_OCR", "auto").lower() != "off")
