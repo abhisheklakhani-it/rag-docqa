@@ -1,3 +1,5 @@
 -r requirements.txt
 pytest>=8.0
 httpx>=0.27
+# Only for the TF-IDF baseline in scripts/evaluate_retrieval.py (the app itself uses BM25)
+scikit-learn>=1.4

@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RAG Document QA</title>
+<style>
+  :root {
+    --bg: #f7f7f5; --card: #ffffff; --text: #1b1b19; --muted: #5f5e59; --line: #e3e2de;
+    --accent: #2a78d6; --accent-text: #ffffff; --mark: #eef4fc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #161615; --card: #1f1f1e; --text: #f2f1ec; --muted: #b3b2ab; --line: #34342f;
+            --accent: #4b93ea; --accent-text: #0b0b0b; --mark: #1d2a3a; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 820px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 1.6rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin-bottom: 16px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  input[type=text] { flex: 1; min-width: 220px; padding: 11px 12px; border-radius: 8px; border: 1px solid var(--line);
+                     background: var(--bg); color: var(--text); font: inherit; }
+  button { padding: 10px 16px; border-radius: 8px; border: 0; background: var(--accent); color: var(--accent-text);
+           font: inherit; font-weight: 600; cursor: pointer; }
+  button:disabled { opacity: .5; cursor: default; }
+  .muted { color: var(--muted); font-size: .9rem; }
+  #docs { margin-top: 8px; }
+  #answer { white-space: pre-wrap; min-height: 1.5em; }
+  .cursor::after { content: "▍"; animation: blink 1s steps(1) infinite; color: var(--accent); }
+  @keyframes blink { 50% { opacity: 0; } }
+  .source { border-top: 1px solid var(--line); padding: 10px 0; }
+  .source b { font-weight: 600; }
+  .source p { margin: 4px 0 0; color: var(--muted); font-size: .9rem; }
+  .tag { display: inline-block; background: var(--mark); color: var(--accent); border-radius: 6px;
+         padding: 1px 8px; font-size: .8rem; font-weight: 600; margin-left: 6px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>RAG Document QA</h1>
+  <p class="sub">Upload documents, ask a question, and watch a cited answer stream in.</p>
+
+  <section class="card">
+    <div class="row">
+      <input id="file" type="file" accept=".pdf,.txt,.md" aria-label="Document to upload">
+      <button id="upload">Upload</button>
+    </div>
+    <div id="docs" class="muted">Loading documents…</div>
+  </section>
+
+  <section class="card">
+    <form id="ask" class="row">
+      <input id="question" type="text" placeholder="Ask a question about your documents" aria-label="Question" required minlength="3">
+      <button id="go" type="submit">Ask</button>
+    </form>
+  </section>
+
+  <section class="card" id="result" hidden>
+    <div class="muted">Answer <span id="mode" class="tag" hidden></span></div>
+    <div id="answer"></div>
+    <div class="muted" style="margin-top:14px">Sources</div>
+    <div id="sources"></div>
+  </section>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+
+async function refreshDocs() {
+  const [docs, health] = await Promise.all([fetch("/documents").then(r => r.json()), fetch("/health").then(r => r.json())]);
+  $("docs").textContent = docs.length
+    ? `Indexed: ${docs.join(", ")} · retriever: ${health.retriever} · LLM: ${health.llm || "none (extractive answers)"}`
+    : "No documents yet. Upload a .pdf, .txt or .md file.";
+}
+
+$("upload").onclick = async () => {
+  const file = $("file").files[0];
+  if (!file) return;
+  $("upload").disabled = true;
+  const body = new FormData();
+  body.append("file", file);
+  const res = await fetch("/documents", { method: "POST", body });
+  const data = await res.json();
+  $("upload").disabled = false;
+  if (!res.ok) { $("docs").textContent = data.detail; return; }
+  await refreshDocs();
+};
+
+function renderSources(sources) {
+  $("sources").replaceChildren(...sources.map((s) => {
+    const div = document.createElement("div");
+    div.className = "source";
+    const title = document.createElement("b");
+    title.textContent = s.page ? `${s.source}, p. ${s.page}` : s.source;
+    const text = document.createElement("p");
+    text.textContent = s.text.length > 220 ? s.text.slice(0, 220) + "…" : s.text;
+    div.append(title, text);
+    return div;
+  }));
+}
+
+$("ask").onsubmit = async (event) => {
+  event.preventDefault();
+  $("go").disabled = true;
+  $("result").hidden = false;
+  $("answer").textContent = "";
+  $("answer").classList.add("cursor");
+  $("mode").hidden = true;
+  $("sources").replaceChildren();
+
+  // EventSource only supports GET, so read the POST response stream and split it into SSE events.
+  const res = await fetch("/ask/stream", {
+    method: "POST", headers: { "content-type": "application/json" },
+    body: JSON.stringify({ question: $("question").value }),
+  });
+  const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+  let buffer = "";
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += value;
+    let end;
+    while ((end = buffer.indexOf("\n\n")) >= 0) {
+      const block = buffer.slice(0, end);
+      buffer = buffer.slice(end + 2);
+      const event = block.match(/^event: (.*)$/m)?.[1];
+      const data = JSON.parse(block.match(/^data: (.*)$/m)?.[1] ?? "null");
+      if (event === "sources") renderSources(data);
+      if (event === "token") $("answer").textContent += data.text;
+      if (event === "error") $("answer").textContent += "\n\n" + data.message;
+      if (event === "done") { $("mode").textContent = data.mode; $("mode").hidden = false; }
+    }
+  }
+  $("answer").classList.remove("cursor");
+  $("go").disabled = false;
+};
+
+refreshDocs();
+</script>
+</body>
+</html>

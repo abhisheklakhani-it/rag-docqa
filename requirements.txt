@@ -2,9 +2,14 @@ fastapi>=0.110
 uvicorn[standard]>=0.29
 python-multipart>=0.0.9
 pydantic>=2.6
-scikit-learn>=1.4
 numpy>=1.26
 joblib>=1.3
 langchain-text-splitters>=0.2
 pypdf>=4.0
 anthropic>=0.60
+# Retrieval: stemming for BM25, sentence embeddings with ONNX Runtime (no PyTorch)
+PyStemmer>=2.2
+fastembed>=0.5
+# OCR for scanned PDFs: render pages (pypdfium2), read text (RapidOCR, bundled models)
+pypdfium2>=4.30
+rapidocr>=3.9

@@ -23,3 +23,11 @@ class Settings:
     max_upload_mb: int = field(default_factory=lambda: int(os.getenv("RAGQA_MAX_UPLOAD_MB", "20")))
     model: str = field(default_factory=lambda: os.getenv("RAGQA_MODEL", "claude-opus-5"))
     use_llm: bool = field(default_factory=_llm_enabled)
+    # Retrieval: "hybrid" (BM25 + embeddings), "bm25", "dense", or "tfidf" (the original baseline).
+    retriever: str = field(default_factory=lambda: os.getenv("RAGQA_RETRIEVER", "hybrid").lower())
+    embedding_model: str = field(default_factory=lambda: os.getenv("RAGQA_EMBEDDING_MODEL", "BAAI/bge-small-en-v1.5"))
+    embedding_cache_dir: str | None = field(default_factory=lambda: os.getenv("RAGQA_EMBEDDING_CACHE_DIR") or None)
+    # Dense hits below this cosine similarity are ignored, so unrelated questions find nothing.
+    min_dense_score: float = field(default_factory=lambda: float(os.getenv("RAGQA_MIN_DENSE_SCORE", "0.0")))
+    # OCR for scanned PDF pages that have no text layer: "auto" (default) or "off".
+    ocr: bool = field(default_factory=lambda: os.getenv("RAGQA_OCR", "auto").lower() != "off")

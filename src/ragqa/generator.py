@@ -1,6 +1,7 @@
 """Turn retrieved chunks into an answer: with Claude when configured, extractively otherwise."""
 
 import logging
+from collections.abc import Iterator
 
 import anthropic
 
@@ -36,19 +37,34 @@ class ClaudeGenerator:
         self.model = model
         self.client = client or anthropic.Anthropic()
 
+    def _request(self, question: str, contexts: list[Chunk]) -> dict:
+        return {
+            "model": self.model,
+            "max_tokens": 16000,
+            "system": SYSTEM_PROMPT,
+            # If the model declines a request, the API retries it on a fallback model.
+            "betas": ["server-side-fallback-2026-07-01"],
+            "fallbacks": "default",
+            "messages": [{"role": "user", "content": build_prompt(question, contexts)}],
+        }
+
     def answer(self, question: str, contexts: list[Chunk]) -> str:
         if not contexts:
             return NO_CONTEXT_ANSWER
-        response = self.client.beta.messages.create(
-            model=self.model,
-            max_tokens=16000,
-            system=SYSTEM_PROMPT,
-            # If the model declines a request, the API retries it on a fallback model.
-            betas=["server-side-fallback-2026-07-01"],
-            fallbacks="default",
-            messages=[{"role": "user", "content": build_prompt(question, contexts)}],
-        )
+        response = self.client.beta.messages.create(**self._request(question, contexts))
         if response.stop_reason == "refusal":
             logger.warning("Model declined to answer; returning extractive answer")
             return extractive_answer(contexts)
         return "".join(block.text for block in response.content if block.type == "text").strip()
+
+    def stream(self, question: str, contexts: list[Chunk]) -> Iterator[str]:
+        """Yield the answer piece by piece as the model writes it."""
+        if not contexts:
+            yield NO_CONTEXT_ANSWER
+            return
+        with self.client.beta.messages.stream(**self._request(question, contexts)) as stream:
+            yield from stream.text_stream
+            if stream.get_final_message().stop_reason == "refusal":
+                # Text already sent can't be taken back, so add a clear note instead.
+                logger.warning("Model declined to answer during streaming")
+                yield "\n\n(The model declined to answer. Best matching passage:)\n\n" + extractive_answer(contexts)
