@@ -74,3 +74,18 @@ def score_run(run: dict[str, list[str]], qrels: dict[str, dict[str, int]]) -> di
         totals["mrr@10"] += reciprocal_rank(ranked, relevant)
         totals["ndcg@10"] += ndcg_at_k(ranked, relevant)
     return {name: value / len(qrels) for name, value in totals.items()}
+
+
+def per_query_ndcg(run: dict[str, list[str]], qrels: dict[str, dict[str, int]]) -> dict[str, float]:
+    return {qid: ndcg_at_k(run.get(qid, []), relevant) for qid, relevant in qrels.items()}
+
+
+def paired_randomization_test(a: list[float], b: list[float], n: int = 10_000, seed: int = 0) -> float:
+    """Two-sided p-value that mean(a - b) != 0: flip the sign of each per-question difference at random
+    and count how often the mean is at least as large as observed (standard test in IR evaluation)."""
+    import numpy as np
+
+    diffs = np.asarray(a) - np.asarray(b)
+    signs = np.random.default_rng(seed).choice([-1.0, 1.0], size=(n, len(diffs)))
+    extreme = (np.abs((signs * diffs).mean(axis=1)) >= abs(diffs.mean()) - 1e-12).sum()
+    return float((extreme + 1) / (n + 1))
