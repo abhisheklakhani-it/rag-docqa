@@ -10,3 +10,6 @@ index/
 
 # Private session notes (never uploaded)
 SESSION_NOTES*.txt
+
+# Downloaded evaluation datasets
+data/eval/

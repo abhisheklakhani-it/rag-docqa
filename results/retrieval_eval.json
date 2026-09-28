@@ -1,0 +1,19 @@
+[
+  {
+    "date": "2026-09-28",
+    "dataset": "scifact/test",
+    "retriever": "tfidf",
+    "chunk_size": 800,
+    "chunk_overlap": 120,
+    "docs": 5183,
+    "chunks": 17353,
+    "queries": 300,
+    "recall@1": 0.4056,
+    "recall@5": 0.6581,
+    "recall@10": 0.7236,
+    "mrr@10": 0.5225,
+    "ndcg@10": 0.5671,
+    "index_seconds": 1.3,
+    "ms_per_query": 6.81
+  }
+]
