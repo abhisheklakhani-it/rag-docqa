@@ -12,9 +12,9 @@ RENDER_SCALE = 2.0  # 72 dpi x 2 = 144 dpi: sharp enough for body text, still fa
 def _engine():
     from rapidocr import RapidOCR
 
-    for name in ("RapidOCR", "rapidocr"):  # the library logs every step at INFO level
-        logging.getLogger(name).setLevel(logging.WARNING)
-    return RapidOCR()  # uses the English/Chinese PP-OCR models bundled with the package (no download)
+    # Uses the PP-OCR models bundled with the package (no download). The library logs every step at
+    # INFO level by default, so only warnings are kept.
+    return RapidOCR(params={"Global.log_level": "warning"})
 
 
 def ocr_image(image) -> str:
