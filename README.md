@@ -2,6 +2,7 @@
 
 A retrieval-augmented generation (RAG) service. Upload documents (`.txt`, `.md`, `.pdf`, including **scanned PDFs**), ask questions, and get answers **grounded in and cited from** those documents, streamed word by word, with the file and page each answer came from.
 
+[![CI](https://github.com/abhisheklakhani-it/rag-docqa/actions/workflows/ci.yml/badge.svg)](https://github.com/abhisheklakhani-it/rag-docqa/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
 ![ONNX Runtime](https://img.shields.io/badge/ONNX%20Runtime-embeddings%20%2B%20OCR-005CED)
