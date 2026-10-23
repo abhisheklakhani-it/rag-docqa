@@ -56,7 +56,7 @@ jobs:
           cache-to: type=gha,mode=max
       - name: Start the container and call /health
         run: |
-          docker run -d --name app -p 8000:8000app:ci
+          docker run -d --name app -p 8000:8000 app:ci
           for i in $(seq 1 60); do curl -sf localhost:8000/health && exit 0; sleep 2; done
           docker logs app
           exit 1
